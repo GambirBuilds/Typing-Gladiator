@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Typing Gladiator ⚔️⌨️</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0b0b14;
+      color: #e8e8ff;
+      font-family: 'Segoe UI', 'Consolas', 'Courier New', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    h1 {
+      font-size: 2.1rem;
+      margin-bottom: 0.25rem;
+      background: linear-gradient(90deg, #00f5d4, #7b5cff, #ff6b9d);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      opacity: 0.65;
+      margin-bottom: 1rem;
+    }
+
+    #game-wrap {
+      position: relative;
+      width: 720px;
+      max-width: 96vw;
+      height: 520px;
+      border: 3px solid #3d3a6b;
+      border-radius: 12px;
+      background: #12121f;
+      box-shadow: 0 0 40px rgba(123, 92, 255, 0.25),
+                  inset 0 0 60px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* HUD */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+      font-size: 0.95rem;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    #hud .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 70px;
+    }
+
+    #hud .label {
+      font-size: 0.7rem;
+      opacity: 0.6;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    #hud .value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #00f5d4;
+    }
+
+    /* Typing input area */
+    #input-area {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 70px;
+      background: rgba(15, 15, 28, 0.92);
+      border-top: 2px solid #3d3a6b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 0 16px;
+      z-index: 5;
+    }
+
+    #current-word {
+      font-size: 1.6rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      min-width: 200px;
+      text-align: center;
+    }
+
+    #current-word .typed {
+      color: #00f5d4;
+    }
+
+    #current-word .remaining {
+      color: #8888aa;
+    }
+
+    #current-word .wrong {
+      color: #ff4d6d;
+      text-decoration: underline;
+    }
+
+    #wpm-live {
+      position: absolute;
+      right: 18px;
+      font-size: 0.85rem;
+      opacity: 0.7;
+    }
+
+    /* Overlay screens */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(8, 8, 18, 0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      z-index: 20;
+    }
+
+    .overlay h2 {
+      font-size: 2.2rem;
+      margin-bottom: 0.6rem;
+      background: linear-gradient(90deg, #00f5d4, #ff6b9d);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .overlay p {
+      max-width: 420px;
+      line-height: 1.5;
+      opacity: 0.85;
+      margin: 0.35rem 0;
+    }
+
+    .btn {
+      margin-top: 1.6rem;
+      padding: 13px 36px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #7b5cff, #00f5d4);
+      color: #0b0b14;
+      border: none;
+      border-radius: 40px;
+      cursor: pointer;
+      box-shadow: 0 4px 24px rgba(0, 245, 212, 0.35);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 30px rgba(0, 245, 212, 0.5);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 28px;
+      margin-top: 1.2rem;
+      font-size: 1.05rem;
+    }
+
+    .stats-grid span {
+      opacity: 0.7;
+    }
+
+    .controls-hint {
+      margin-top: 1.4rem;
+      font-size: 0.8rem;
+      opacity: 0.5;
+    }
+
+    /* Combo popup */
+    #combo {
+      position: absolute;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.4rem;
+      font-weight: 800;
+      color: #ffd60a;
+      text-shadow: 0 0 20px #ffd60a;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 15;
+      transition: opacity 0.2s;
+    }
+  </style>
+</head>
+<body>
+  <h1>Typing Gladiator ⚔️⌨️</h1>
+  <p class="subtitle">Type to destroy. Speed is your weapon.</p>
+
+  <div id="game-wrap">
+    <canvas id="c"></canvas>
+
+    <div id="hud">
+      <div class="stat">
+        <span class="label">Score</span>
+        <span class="value" id="score">0</span>
+      </div>
+      <div class="stat">
+        <span class="label">Level</span>
+        <span class="value" id="level">1</span>
+      </div>
+      <div class="stat">
+        <span class="label">Streak</span>
+        <span class="value" id="streak">0</span>
+      </div>
+      <div class="stat">
+        <span class="label">WPM</span>
+        <span class="value" id="wpm">0</span>
+      </div>
+      <div class="stat">
+        <span class="label">Accuracy</span>
+        <span class="value" id="acc">100%</span>
+      </div>
+    </div>
+
+    <div id="input-area">
+      <div id="current-word">
+        <span class="remaining">type to start…</span>
+      </div>
+      <div id="wpm-live"></div>
+    </div>
+
+    <div id="combo">COMBO x2</div>
+
+    <!-- Start Overlay -->
+    <div class="overlay" id="start-screen">
+      <h2>Typing Gladiator</h2>
+      <p>Words and code keywords fall toward you.<br>
+         Type them correctly before they hit the ground.</p>
+      <p>Mix of English words + programming terms to train coding muscle memory.</p>
+      <button class="btn" id="start-btn">Enter the Arena</button>
+      <p class="controls-hint">Just start typing — no need to click the words</p>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div class="overlay" id="gameover-screen" style="display:none;">
+      <h2>Defeated</h2>
+      <div class="stats-grid">
+        <div><span>Score</span><br><strong id="go-score">0</strong></div>
+        <div><span>Level</span><br><strong id="go-level">1</strong></div>
+        <div><span>Best Streak</span><br><strong id="go-streak">0</strong></div>
+        <div><span>Max WPM</span><br><strong id="go-wpm">0</strong></div>
+        <div><span>Accuracy</span><br><strong id="go-acc">100%</strong></div>
+        <div><span>Words Killed</span><br><strong id="go-kills">0</strong></div>
+      </div>
+      <button class="btn" id="restart-btn">Fight Again</button>
+    </div>
+  </div>
+
+  <script>
+    // ========== WORD LISTS ==========
+    const EASY = [
+      "if","else","for","var","let","const","true","false","null","void",
+      "int","str","bool","list","map","set","key","val","run","out",
+      "code","data","loop","func","call","push","pop","get","set","add",
+      "html","css","js","api","url","json","xml","sql","git","npm",
+      "cat","dog","run","jump","fast","slow","type","word","game","play"
+    ];
+
+    const MEDIUM = [
+      "function","return","import","export","class","object","array","string",
+      "number","boolean","undefined","promise","async","await","then","catch",
+      "module","require","console","window","document","element","event",
+      "listener","callback","closure","scope","hoist","proto","bind","this",
+      "switch","case","break","continue","while","do","throw","try","finally",
+      "interface","type","enum","public","private","static","extends","super",
+      "react","vue","node","python","java","rust","swift","kotlin","docker",
+      "linux","server","client","request","response","header","cookie","token"
+    ];
+
+    const HARD = [
+      "javascript","typescript","algorithm","recursive","polymorphism",
+      "inheritance","encapsulation","abstraction","middleware","decorator",
+      "generator","iterator","prototype","constructor","destructor",
+      "synchronization","asynchronous","concurrency","parallelism",
+      "memoization","optimization","refactoring","deployment","kubernetes",
+      "microservice","authentication","authorization","encryption","hashing",
+      "blockchain","machinelearning","neuralnetwork","gradient","backpropagation",
+      "database","transaction","normalization","index","query","join",
+      "websocket","graphql","restful","middleware","dependency","injection"
+    ];
+
+    // ========== GAME STATE ==========
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    const wrap = document.getElementById('game-wrap');
+
+    let W, H;
+    function resize() {
+      const rect = wrap.getBoundingClientRect();
+      W = canvas.width = rect.width * devicePixelRatio;
+      H = canvas.height = rect.height * devicePixelRatio;
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+      // logical size
+      W = rect.width;
+      H = rect.height;
+    }
+    resize();
+    window.addEventListener('resize', () => {
+      ctx.setTransform(1,0,0,1,0,0);
+      resize();
+    });
+
+    let enemies = [];
+    let score = 0;
+    let level = 1;
+    let streak = 0;
+    let bestStreak = 0;
+    let kills = 0;
+    let totalTyped = 0;
+    let totalCorrect = 0;
+    let maxWpm = 0;
+    let currentTarget = null;   // the enemy currently being typed
+    let typedSoFar = "";
+    let spawnTimer = 0;
+    let lastTime = 0;
+    let running = false;
+    let gameOver = false;
+    let particles = [];
+    let startTime = 0;
+    let charsThisSecond = 0;
+    let lastWpmCheck = 0;
+    let currentWpm = 0;
+
+    // ========== ENEMY CLASS ==========
+    class Enemy {
+      constructor(word, speed) {
+        this.word = word;
+        this.x = 40 + Math.random() * (W - 80);
+        this.y = -30;
+        this.speed = speed;
+        this.w = 0; // measured later
+        this.matched = 0; // how many chars matched
+        this.dead = false;
+        this.flash = 0;
+        this.hue = Math.random() * 60 + 160; // blue-cyan range
+      }
+
+      update(dt) {
+        this.y += this.speed * dt;
+        if (this.flash > 0) this.flash -= dt * 4;
+      }
+
+      draw(ctx) {
+        // background pill
+        const padding = 10;
+        ctx.font = 'bold 18px Consolas, monospace';
+        this.w = ctx.measureText(this.word).width + padding * 2;
+
+        const alpha = this.dead ? 0 : 1;
+        ctx.globalAlpha = alpha;
+
+        // glow when targeted
+        if (this === currentTarget) {
+          ctx.shadowColor = '#00f5d4';
+          ctx.shadowBlur = 18;
+        } else {
+          ctx.shadowBlur = 0;
+        }
+
+        // body
+        const h = 32;
+        roundRect(ctx, this.x - this.w/2, this.y - h/2, this.w, h, 8);
+        ctx.fillStyle = this === currentTarget
+          ? `hsla(${this.hue}, 70%, 25%, 0.95)`
+          : `hsla(${this.hue}, 50%, 18%, 0.9)`;
+        ctx.fill();
+
+        ctx.strokeStyle = this === currentTarget ? '#00f5d4' : `hsla(${this.hue}, 70%, 55%, 0.7)`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // text
+        ctx.shadowBlur = 0;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = 'bold 18px Consolas, monospace';
+
+        // already typed part
+        if (this.matched > 0) {
+          const typed = this.word.slice(0, this.matched);
+          const rest = this.word.slice(this.matched);
+          const typedW = ctx.measureText(typed).width;
+          const totalW = ctx.measureText(this.word).width;
+          const startX = this.x - totalW / 2;
+
+          ctx.fillStyle = '#00f5d4';
+          ctx.textAlign = 'left';
+          ctx.fillText(typed, startX, this.y);
+
+          ctx.fillStyle = '#c8c8e0';
+          ctx.fillText(rest, startX + typedW, this.y);
+        } else {
+          ctx.fillStyle = '#e0e0ff';
+          ctx.textAlign = 'center';
+          ctx.fillText(this.word, this.x, this.y);
+        }
+
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    // ========== PARTICLES ==========
+    function spawnExplosion(x, y, color) {
+      for (let i = 0; i < 14; i++) {
+        particles.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 8,
+          vy: (Math.random() - 0.5) * 8 - 2,
+          life: 1,
+          color,
+          size: Math.random() * 4 + 2
+        });
+      }
+    }
+
+    // ========== CORE LOGIC ==========
+    function getWord() {
+      let pool;
+      if (level < 3) pool = EASY;
+      else if (level < 7) pool = [...EASY, ...MEDIUM];
+      else pool = [...MEDIUM, ...HARD];
+
+      // avoid words already on screen
+      const onScreen = new Set(enemies.map(e => e.word));
+      let word;
+      do {
+        word = pool[Math.floor(Math.random() * pool.length)];
+      } while (onScreen.has(word) && onScreen.size < pool.length);
+      return word;
+    }
+
+    function spawnEnemy() {
+      const baseSpeed = 35 + level * 6;
+      const speed = baseSpeed + Math.random() * 15;
+      enemies.push(new Enemy(getWord(), speed));
+    }
+
+    function findTarget(char) {
+      // Prefer continuing the current target
+      if (currentTarget && !currentTarget.dead) {
+        const next = currentTarget.word[currentTarget.matched];
+        if (next && next.toLowerCase() === char.toLowerCase()) {
+          return currentTarget;
+        }
+      }
+
+      // Find a new enemy that starts with this char (or next needed)
+      for (const e of enemies) {
+        if (e.dead) continue;
+        if (e.matched === 0 && e.word[0].toLowerCase() === char.toLowerCase()) {
+          return e;
+        }
+      }
+      return null;
+    }
+
+    function typeChar(char) {
+      if (!running || gameOver) return;
+
+      totalTyped++;
+      const target = findTarget(char);
+
+      if (!target) {
+        // wrong key – break streak, small penalty
+        streak = 0;
+        updateHUD();
+        // flash red on input area
+        document.getElementById('input-area').style.borderTopColor = '#ff4d6d';
+        setTimeout(() => {
+          document.getElementById('input-area').style.borderTopColor = '#3d3a6b';
+        }, 150);
+        return;
+      }
+
+      // correct
+      totalCorrect++;
+      currentTarget = target;
+      target.matched++;
+      target.flash = 1;
+
+      // finished the word?
+      if (target.matched >= target.word.length) {
+        // kill it
+        target.dead = true;
+        kills++;
+        streak++;
+        bestStreak = Math.max(bestStreak, streak);
+
+        const len = target.word.length;
+        const points = Math.floor(len * 10 * (1 + streak * 0.08) * (1 + level * 0.05));
+        score += points;
+
+        spawnExplosion(target.x, target.y, `hsl(${target.hue},80%,60%)`);
+
+        // combo popup
+        if (streak >= 3 && streak % 2 === 1) {
+          showCombo(streak);
+        }
+
+        // level up every 8 kills
+        if (kills % 8 === 0) {
+          level++;
+        }
+
+        currentTarget = null;
+        typedSoFar = "";
+      }
+
+      updateHUD();
+      updateCurrentWordDisplay();
+    }
+
+    function showCombo(n) {
+      const el = document.getElementById('combo');
+      el.textContent = `COMBO x${n}`;
+      el.style.opacity = '1';
+      setTimeout(() => el.style.opacity = '0', 700);
+    }
+
+    function updateCurrentWordDisplay() {
+      const el = document.getElementById('current-word');
+      if (!currentTarget || currentTarget.dead) {
+        el.innerHTML = `<span class="remaining">type any starting letter…</span>`;
+        return;
+      }
+      const typed = currentTarget.word.slice(0, currentTarget.matched);
+      const rest = currentTarget.word.slice(currentTarget.matched);
+      el.innerHTML = `<span class="typed">${typed}</span><span class="remaining">${rest}</span>`;
+    }
+
+    function updateHUD() {
+      document.getElementById('score').textContent = score;
+      document.getElementById('level').textContent = level;
+      document.getElementById('streak').textContent = streak;
+      document.getElementById('wpm').textContent = currentWpm;
+      const acc = totalTyped === 0 ? 100 : Math.round((totalCorrect / totalTyped) * 100);
+      document.getElementById('acc').textContent = acc + '%';
+    }
+
+    function endGame() {
+      running = false;
+      gameOver = true;
+
+      const acc = totalTyped === 0 ? 100 : Math.round((totalCorrect / totalTyped) * 100);
+
+      document.getElementById('go-score').textContent = score;
+      document.getElementById('go-level').textContent = level;
+      document.getElementById('go-streak').textContent = bestStreak;
+      document.getElementById('go-wpm').textContent = maxWpm;
+      document.getElementById('go-acc').textContent = acc + '%';
+      document.getElementById('go-kills').textContent = kills;
+
+      document.getElementById('gameover-screen').style.display = 'flex';
+    }
+
+    // ========== GAME LOOP ==========
+    function loop(now) {
+      if (!running) return;
+
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+
+      // spawn logic
+      spawnTimer -= dt;
+      const spawnRate = Math.max(0.55, 1.6 - level * 0.09);
+      if (spawnTimer <= 0) {
+        spawnEnemy();
+        spawnTimer = spawnRate + Math.random() * 0.4;
+      }
+
+      // update enemies
+      for (const e of enemies) {
+        e.update(dt);
+        if (e.y > H - 80 && !e.dead) {
+          endGame();
+          return;
+        }
+      }
+
+      // remove dead
+      enemies = enemies.filter(e => !e.dead || e.y < H + 50);
+
+      // particles
+      for (const p of particles) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 12 * dt;
+        p.life -= dt * 1.8;
+      }
+      particles = particles.filter(p => p.life > 0);
+
+      // WPM calculation (rolling)
+      if (now - lastWpmCheck > 1000) {
+        currentWpm = Math.round(charsThisSecond * 60 / 5); // standard 5 chars = 1 word
+        maxWpm = Math.max(maxWpm, currentWpm);
+        charsThisSecond = 0;
+        lastWpmCheck = now;
+        updateHUD();
+      }
+
+      // draw
+      draw();
+
+      requestAnimationFrame(loop);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+
+      // subtle grid
+      ctx.strokeStyle = 'rgba(60,55,120,0.15)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < W; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
+        ctx.stroke();
+      }
+      for (let y = 0; y < H; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+
+      // danger zone at bottom
+      const dangerH = 70;
+      const grad = ctx.createLinearGradient(0, H - dangerH - 40, 0, H);
+      grad.addColorStop(0, 'rgba(255,40,80,0)');
+      grad.addColorStop(1, 'rgba(255,40,80,0.18)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, H - dangerH - 40, W, dangerH + 40);
+
+      // enemies
+      for (const e of enemies) e.draw(ctx);
+
+      // particles
+      for (const p of particles) {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // ========== INPUT ==========
+    window.addEventListener('keydown', e => {
+      if (!running || gameOver) return;
+
+      // ignore modifiers alone
+      if (e.key.length === 1) {
+        e.preventDefault();
+        charsThisSecond++;
+        typeChar(e.key);
+      }
+    });
+
+    // ========== START / RESTART ==========
+    function startGame() {
+      enemies = [];
+      particles = [];
+      score = 0;
+      level = 1;
+      streak = 0;
+      bestStreak = 0;
+      kills = 0;
+      totalTyped = 0;
+      totalCorrect = 0;
+      maxWpm = 0;
+      currentTarget = null;
+      typedSoFar = "";
+      spawnTimer = 0.8;
+      currentWpm = 0;
+      charsThisSecond = 0;
+      gameOver = false;
+      running = true;
+      startTime = performance.now();
+      lastTime = performance.now();
+      lastWpmCheck = performance.now();
+
+      document.getElementById('start-screen').style.display = 'none';
+      document.getElementById('gameover-screen').style.display = 'none';
+      updateHUD();
+      updateCurrentWordDisplay();
+
+      requestAnimationFrame(loop);
+    }
+
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('restart-btn').addEventListener('click', startGame);
+
+    // initial resize
+    setTimeout(resize, 50);
+  </script>
+</body>
+</html>
